@@ -32,6 +32,7 @@ from ctags import (FILENAME, parse_tag_lines, PATH_ORDER, SYMBOL, Tag, TagFile)
 
 setting = sublime.load_settings('CTags.sublime-settings').get # (key, None)
 
+
 ################################### CONSTANTS ##################################
 
 OBJECT_PUNCTUATORS = {
@@ -59,6 +60,11 @@ def select(view, region):
     sel_set.clear()
     sel_set.add(region)
     view.show(region)
+
+def syntax_name(view):
+    syntax = os.path.basename(view.settings().get('syntax'))
+    syntax = os.path.splitext(syntax)[0]
+    return syntax
 
 def in_main(f):
     @functools.wraps(f)
@@ -559,6 +565,11 @@ class ShowSymbols(sublime_plugin.TextCommand):
 class rebuild_tags(sublime_plugin.TextCommand):
     def run(self, edit, **args):
         view=self.view
+        syntax_settings=sublime.load_settings(syntax_name(view) + '.sublime-settings')
+        if syntax_settings.has('ctags_command'):
+            command = syntax_settings.get('ctags_command')
+        else:
+            command = setting('ctags_command')
         tag_file = find_tags_relative_to(view)
 
         if not tag_file:
@@ -571,8 +582,8 @@ class rebuild_tags(sublime_plugin.TextCommand):
 
             if 0:  # not 1 or sublime.question_box('`ctags -R` in %s ?'% dirname(tag_file)):
                 return
-
-        self.build_ctags(setting('ctags_command'), tag_file)
+        status_message('Executing CTags Command %s' % command)
+        self.build_ctags(command, tag_file)
 
     def done_building(self, tag_file):
         status_message('Finished building %s' % tag_file)
